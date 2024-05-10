@@ -1,7 +1,7 @@
 # obs-drops-overlay
 
 A Browser-Source overlay for playing sounds, music and Videos right in OBS. 
-Controlled by a webserver the overlay can be controlled from a tablet of phone.
+Controlled by a webserver the overlay can be controlled from a tablet or phone.
 
 ## functionality
 
