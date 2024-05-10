@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>overlay</title>
+    <style>
+        html, body {
+            background-color: transparent;
+            color: white;
+            overflow: hidden;
+        }
+        #videoDiv {
+            left: 0;
+            top: 0;
+            margin: 0;
+            padding: 0;
+            z-index: 1000;
+            width: 1920px;
+            height: 1080px;
+            background-color: #000000;
+            position: fixed;
+        }
+        #videoEm {
+            width: 1920px;
+            height: 1080px;
+        }
+        .show {
+            opacity: 1;
+            transition: opacity 300ms linear;
+        }
+        .hide {
+            opacity: 0;
+            transition: opacity 300ms linear;
+        }
+    </style>
+</head>
+<body>
+<div id="videoDiv" class="hide">
+    <video id="videoEm" src="" onended="videoControl('', false)"></video>
+</div>
+<script>
+    let serverIP = "{{ .IP }}";
+    let port = "{{ .Port }}";
+    let responseDelay = 1000;
+    let synth = speechSynthesis;
+    let audio;
+    let playingAudio = [];
+    let playingMusic = [];
+    let audioVol = 0.8;
+    let audioPlaybackRate = 1.0;
+    let musicVol = 0.8;
+    let videoVol = 0.8;
+    let speak = (text) => {
+        let utterance = new SpeechSynthesisUtterance(text);
+        synth.speak(utterance);
+    };
+    let assetUrl = `http://${serverIP}:${port}/assets?file=`
+    let vidDiv = document.getElementById("videoDiv");
+    let vid = document.getElementById("videoEm");
+    let videoControl = (data, show) => {
+        console.log(data);
+        if (data.length > 0) {
+            vid.src = data;
+        }
+        if (show) {
+            vidDiv.classList.remove("hide");
+            vidDiv.classList.add("show");
+            vid.play();
+            vid.volume = videoVol;
+        } else {
+            vid.pause()
+            vid.src = "";
+            vidDiv.classList.remove("show");
+            vidDiv.classList.add("hide");
+        }
+    };
+    let audioControl = (data, show) => {
+        console.log(data, audio);
+        if (show) {
+            let na = new Audio(data);
+            if (data.includes("music")) {
+                playingMusic.push(na);
+                na.volume = musicVol;
+            } else {
+                playingAudio.push(na);
+                na.playbackRate = audioPlaybackRate;
+                na.volume = audioVol;
+            }
+            na.play();
+        } else {
+            switch (data) {
+                case "audio":
+                    playingAudio.forEach((item) => {
+                        item.pause();
+                    });
+                    break;
+                case "music":
+                    playingMusic.forEach((item) => {
+                        item.pause();
+                    });
+                    break;
+            }
+        }
+    };
+    let setVolume = (obj, value) => {
+        obj.forEach((item) => {
+            item.volume = value;
+        });
+    };
+    let setPlaybackRate = () => {
+        playingAudio.forEach((item) => {
+            item.playbackRate = audioPlaybackRate;
+        });
+    };
+    let processControlMessage = (msg) => {
+        let jd;
+        try {
+            jd = JSON.parse(msg.data);
+        }
+        catch (e) {
+            console.log("Error parsing json:", e);
+            return;
+        }
+        let action = jd["action"];
+        let key = jd["key"];
+        let value = jd["value"];
+        switch (action) {
+            case "video":
+                switch (key) {
+                    case "play":
+                        if (`${value}`.includes("https://")||`${value}`.includes("http://")) {
+                            videoControl(`${value}`, true);
+                        } else {
+                            videoControl(`${assetUrl}${value}`, true);
+                        }
+                        break;
+                    case "stop":
+                        videoControl("", false);
+                        break;
+                    case "pr":
+                        if (vid.paused) {
+                            vid.play();
+                        } else {
+                            vid.pause();
+                        }
+                        break;
+                    case "seek":
+                        vid.currentTime = value;
+                        break;
+                }
+                break;
+            case "audio":
+                switch (key) {
+                    case "play":
+                        audioControl(`${assetUrl}${value}`, true);
+                        break;
+                    case "stop":
+                        audioControl(value, false);
+                        break;
+                }
+                break;
+            case "volume":
+                console.log(key, value);
+                switch (key) {
+                    case "playbackRate":
+                        audioPlaybackRate = value;
+                        setPlaybackRate();
+                        break;
+                    case "videoVolume":
+                        videoVol = value;
+                        vid.volume = value;
+                        break;
+                    case "musicVolume":
+                        musicVol = value;
+                        setVolume(playingMusic, musicVol);
+                        break;
+                    case "audioVolume":
+                        audioVol = value;
+                        setVolume(playingAudio, audioVol);
+                        break;
+                    case "video":
+                        vid.volume = value;
+                        break;
+                    default:
+                        console.log("you done fucked up -> processControlMessage:volume")
+                }
+                break;
+            case "speak":
+                speak(`${value}`);
+                break;
+        }
+    };
+    let address = `ws://${serverIP}:${port}/overlayWS`;
+    console.log(`connecting to ${address}`)
+    let cws;
+    let connect = () => {
+        cws = new WebSocket(address);
+        cws.onopen = function() {
+            connectionStatus = true;
+            console.log(`connected to ${address}`);
+            cws.send(JSON.stringify({action: "status", key: "connection", value: "connected"}))
+        }
+        cws.onmessage = function(event) {processControlMessage(event, false)};
+        cws.onclose = function(e) {
+            connectionStatus = false;
+            console.log('Socket is closed. Reconnect will be attempted in 5 second(s).', e.reason);
+            cws = null;
+            setTimeout(() => {
+                connect();
+            }, 5000);
+        };
+        cws.onerror = function(err) {
+            console.error('Socket encountered error: ', err.message, 'Closing socket');
+            cws.close();
+        };
+    };
+    window.addEventListener('load', () => {
+        console.log('All assets are loaded')
+        connect();
+    })
+    setInterval(() => {
+        if (vid.currentTime > 0 && !vid.paused && !vid.ended && vid.readyState > 2) {
+            cws.send(JSON.stringify({action: "video", key: "progress", value: vid.currentTime}))
+            cws.send(JSON.stringify({action: "video", key: "duration", value: vid.duration}))
+        }
+    }, responseDelay)
+</script>
+</body>
+</html>
