@@ -3,7 +3,7 @@
 A Browser-Source overlay for playing sounds, music and Videos right in OBS. 
 Controlled by a webserver the overlay can be controlled from a tablet or phone.
 
-## functionality
+## Functionality
 
 ### Video player
 * provides a transparent video player
@@ -17,6 +17,27 @@ Controlled by a webserver the overlay can be controlled from a tablet or phone.
 
 ### Music player
 * has separate volume control
+
+## Use
+
+requires a directory tree
+
+```shell
+$PWD
+  └assets
+     └drops
+     └music
+``` 
+
+* audio and video drops go in drops
+* I am sure you can figure where music goes
+
+### Supported Formats
+
+| type  | format  |
+|-------|---------|
+| audio | mp3     |
+| video | mkv mp4 |
 
 ## TODO
 
