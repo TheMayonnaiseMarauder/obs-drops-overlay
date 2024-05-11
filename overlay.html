@@ -42,24 +42,16 @@
 <script>
     let serverIP = "{{ .IP }}";
     let port = "{{ .Port }}";
-    let responseDelay = 1000;
-    let synth = speechSynthesis;
-    let audio;
     let playingAudio = [];
     let playingMusic = [];
     let audioVol = 0.8;
     let audioPlaybackRate = 1.0;
     let musicVol = 0.8;
     let videoVol = 0.8;
-    let speak = (text) => {
-        let utterance = new SpeechSynthesisUtterance(text);
-        synth.speak(utterance);
-    };
     let assetUrl = `http://${serverIP}:${port}/assets?file=`
     let vidDiv = document.getElementById("videoDiv");
     let vid = document.getElementById("videoEm");
     let videoControl = (data, show) => {
-        console.log(data);
         if (data.length > 0) {
             vid.src = data;
         }
@@ -76,7 +68,6 @@
         }
     };
     let audioControl = (data, show) => {
-        console.log(data, audio);
         if (show) {
             let na = new Audio(data);
             if (data.includes("music")) {
@@ -161,7 +152,6 @@
                 }
                 break;
             case "volume":
-                console.log(key, value);
                 switch (key) {
                     case "playbackRate":
                         audioPlaybackRate = value;
@@ -186,20 +176,16 @@
                         console.log("you done fucked up -> processControlMessage:volume")
                 }
                 break;
-            case "speak":
-                speak(`${value}`);
-                break;
         }
     };
     let address = `ws://${serverIP}:${port}/overlayWS`;
-    console.log(`connecting to ${address}`)
     let cws;
     let connect = () => {
+        console.log(`connecting to ${address}`)
         cws = new WebSocket(address);
         cws.onopen = function() {
             connectionStatus = true;
             console.log(`connected to ${address}`);
-            cws.send(JSON.stringify({action: "status", key: "connection", value: "connected"}))
         }
         cws.onmessage = function(event) {processControlMessage(event, false)};
         cws.onclose = function(e) {
@@ -220,11 +206,12 @@
         connect();
     })
     setInterval(() => {
+        cws.send(JSON.stringify({action: "status", key: "connection", value: "connected"}))
         if (vid.currentTime > 0 && !vid.paused && !vid.ended && vid.readyState > 2) {
             cws.send(JSON.stringify({action: "video", key: "progress", value: vid.currentTime}))
             cws.send(JSON.stringify({action: "video", key: "duration", value: vid.duration}))
         }
-    }, responseDelay)
+    }, 500)
 </script>
 </body>
 </html>

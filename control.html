@@ -55,18 +55,14 @@
             <br>
             <span id="overlayStatus"></span>
         </div>
-        <label for="speak">Speak:</label>
-        <input value="Test" type="text" id="speak">
-        <button onclick='sendSpeech(document.getElementById("speak").value)'>Speak</button>
-        <br>
         <label for="vid">videoFile/Url:</label>
         <input value="" type="text" id="vid">
         <button onclick="sendVideo(document.getElementById('vid').value)">send vid</button>
-        <button onclick="videoPR()">vid pause/resume</button>
-        <button onclick="stopVideo()">stop vid</button>
+        <button onclick="sendControlMessage('video', 'pr', '');">vid pause/resume</button>
+        <button onclick="sendControlMessage('video', 'stop', '');">stop vid</button>
         <br>
         <label for="videoVolume">Video Volume</label><input type="range" value=1.0 step=0.1 max=1 min=0 id="videoVolume" onchange="setVolume(document.getElementById('videoVolume').value, 'videoVolume')">
-        <label for="videoProgress">videoProgress:<span id="videoProgressIntEm"></span></label><input type="range" min=0  step=0.01 max=10 id="videoProgress" onchange="setVideoProgress(document.getElementById('videoProgress').value)">
+        <label for="videoProgress">videoProgress:<span id="videoProgressIntEm"></span></label><input type="range" min=0  step=0.01 max=10 id="videoProgress" onchange="sendControlMessage('video', 'seek', document.getElementById('videoProgress').value);">
         <br>
         <button onclick="stopAudio('audio')">Stop audio</button>
         <button onclick="stopAudio('music')">Stop Music</button>
@@ -101,13 +97,19 @@
         let videoProgressDuration;
         let videoProgressCurrent;
         let musicEm = document.getElementById("music");
+        let connectionStatus = false;
+        let overlayStatus = false;
+        let latestOverlayConnectionTime;
+        let connectionStatusEm = document.getElementById("connectionStatus");
+        let overlayStatusEm = document.getElementById("overlayStatus");
+        let ws;
         let processMessage = (msg) => {
             let pj;
             try {
                 pj = JSON.parse(msg.data);
             }
             catch (e) {
-                console.log(e);
+                console.error("Failed to parse json", e);
                 return;
             }
             let action = pj["action"];
@@ -115,17 +117,10 @@
             let value = pj["value"];
             switch (action) {
                 case  "status":
-                    switch (key) {
-                        case "connection":
-                            switch (value) {
-                                case "connected":
-                                    // 🤣🤣🤣🤣🤣
-                                    overlayStatus = true;
-                                    setStatus();
-                                    break;
-                            }
-                            break;
-                    }
+                    latestOverlayConnectionTime = Date.now();
+                    console.log("connected to overlay")
+                    overlayStatus = true;
+                    setStatus();
                     break;
                 case "video":
                     switch (key) {
@@ -142,13 +137,8 @@
                     break;
             }
         };
-        let connectionStatus = false;
-        let overlayStatus = false;
-        let connectionStatusEm = document.getElementById("connectionStatus");
-        let overlayStatusEm = document.getElementById("overlayStatus");
-        console.log(`connecting to ${wsAddress}`)
-        let ws;
         let connect = () => {
+            console.log(`connecting to ${wsAddress}`)
             ws = new WebSocket(wsAddress);
             ws.onopen = function() {
                 connectionStatus = true;
@@ -173,24 +163,12 @@
         let sendControlMessage = (action, key, value) => {
             ws.send(JSON.stringify({action: action, key: key, value: value}));
         };
-        let sendSpeech = (text) => {
-            sendControlMessage("speak", "", text);
-        };
-        let stopVideo = () => {
-            sendControlMessage("video", "stop", "");
-        };
-        let videoPR = () => {
-            sendControlMessage("video", "pr", "");
-        };
         let sendVideo = (url) => {
             sendControlMessage("video", "play", url)
         };
-        let setVideoProgress = (location) => {
-            sendControlMessage("video", "seek", location);
-        };
+
         let setStatus = () => {
             try {
-                // TODO : receive heartbeat from overlay, this is just a working placeholder
                 if (connectionStatus) {
                     connectionStatusEm.innerText = "Connected to server";
                     connectionStatusEm.style.color = "green";
@@ -261,11 +239,23 @@
                 console.log("error", err);
             });
         };
+        let checkConnectionStatus = () => {
+            let endTime = Date.now();
+            let elapsedTime = endTime - latestOverlayConnectionTime;
+            if (elapsedTime > 2000) {
+                console.log("More than 2000ms elapsed without overlay contact, assuming disconnected");
+                overlayStatus = false;
+                setStatus();
+            }
+        };
         window.addEventListener('load', function() {
             console.log('All assets are loaded')
             connect();
             loadDrops();
             loadMusic();
+            setInterval(() => {
+                checkConnectionStatus();
+            }, 3000);
         })
     </script>
 </body>
