@@ -42,4 +42,3 @@ $PWD
 ## TODO
 
 * control page CSS
-* connection heartbeat from overlay to control page 
