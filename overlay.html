@@ -158,6 +158,7 @@
                         playingMusic.volume = musicVol;
                         break;
                     case "audioVolume":
+                        audioVol = value;
                         playingAudio.forEach((item) => {
                             item.volume = value;
                         });

@@ -101,6 +101,11 @@ func start() {
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
+		defer func() {
+			if err := conn.Close(); err != nil {
+				log.Printf("Error closing /overlayWS connection: %v\n", err)
+			}
+		}()
 		go func() {
 			for {
 				_, msg, err := conn.ReadMessage()
@@ -122,6 +127,11 @@ func start() {
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
+		defer func() {
+			if err := conn.Close(); err != nil {
+				log.Printf("Error closing /controlWS connection: %v\n", err)
+			}
+		}()
 		go func() {
 			for {
 				_, msg, err := conn.ReadMessage()
