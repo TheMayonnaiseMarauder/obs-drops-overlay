@@ -110,6 +110,11 @@
         let connectionStatusEm = document.getElementById("connectionStatus");
         let overlayStatusEm = document.getElementById("overlayStatus");
         let ws;
+        function timeFix(seconds) {
+            const date = new Date(0);
+            date.setSeconds(seconds);
+            return date.toISOString().substring(11, 19);
+        }
         let processMessage = (msg) => {
             let pj;
             try {
@@ -140,7 +145,7 @@
                             videoProgressDuration = value;
                             break;
                     }
-                    videoProgressIntEm.innerText = `${videoProgressCurrent}/${videoProgressDuration}`
+                    videoProgressIntEm.innerText = `${timeFix(videoProgressCurrent)}/${timeFix(videoProgressDuration)}`
                     break;
                 case "music":
                     switch (key) {
@@ -153,7 +158,7 @@
                             musicProgressDuration = value;
                             break;
                     }
-                    musicProgressIntEm.innerText = `${musicProgressCurrent}/${musicProgressDuration}`
+                    musicProgressIntEm.innerText = `${timeFix(musicProgressCurrent)}/${timeFix(musicProgressDuration)}`
                     break;
             }
         };
