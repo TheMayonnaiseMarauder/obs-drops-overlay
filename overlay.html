@@ -43,7 +43,7 @@
     let serverIP = "{{ .IP }}";
     let port = "{{ .Port }}";
     let playingAudio = [];
-    let playingMusic = [];
+    let playingMusic;
     let audioVol = 0.8;
     let audioPlaybackRate = 1.0;
     let musicVol = 0.8;
@@ -66,43 +66,6 @@
             vidDiv.classList.remove("show");
             vidDiv.classList.add("hide");
         }
-    };
-    let audioControl = (data, show) => {
-        if (show) {
-            let na = new Audio(data);
-            if (data.includes("music")) {
-                playingMusic.push(na);
-                na.volume = musicVol;
-            } else {
-                playingAudio.push(na);
-                na.playbackRate = audioPlaybackRate;
-                na.volume = audioVol;
-            }
-            na.play();
-        } else {
-            switch (data) {
-                case "audio":
-                    playingAudio.forEach((item) => {
-                        item.pause();
-                    });
-                    break;
-                case "music":
-                    playingMusic.forEach((item) => {
-                        item.pause();
-                    });
-                    break;
-            }
-        }
-    };
-    let setVolume = (obj, value) => {
-        obj.forEach((item) => {
-            item.volume = value;
-        });
-    };
-    let setPlaybackRate = () => {
-        playingAudio.forEach((item) => {
-            item.playbackRate = audioPlaybackRate;
-        });
     };
     let processControlMessage = (msg) => {
         let jd;
@@ -141,13 +104,40 @@
                         break;
                 }
                 break;
+            case "music":
+                switch (key) {
+                    case "play":
+                        if (playingMusic != null) {
+                            playingMusic.pause();
+                            playingMusic = null;
+                        }
+                        playingMusic = new Audio(`${assetUrl}${value}`);
+                        playingMusic.volume = musicVol;
+                        playingMusic.play();
+                        break;
+                    case "seek":
+                        playingMusic.currentTime = value;
+                        break;
+                    case "stop":
+                        playingMusic.pause();
+                        playingMusic = null;
+                        break;
+                }
+                break;
             case "audio":
                 switch (key) {
                     case "play":
-                        audioControl(`${assetUrl}${value}`, true);
+                        let na = new Audio(`${assetUrl}${value}`);
+                        playingAudio.push(na);
+                        na.playbackRate = audioPlaybackRate;
+                        na.volume = audioVol;
+                        na.play();
                         break;
                     case "stop":
-                        audioControl(value, false);
+                        playingAudio.forEach((item) => {
+                            item.pause();
+                        });
+                        playingAudio = [];
                         break;
                 }
                 break;
@@ -155,7 +145,9 @@
                 switch (key) {
                     case "playbackRate":
                         audioPlaybackRate = value;
-                        setPlaybackRate();
+                        playingAudio.forEach((item) => {
+                            item.playbackRate = audioPlaybackRate;
+                        });
                         break;
                     case "videoVolume":
                         videoVol = value;
@@ -163,11 +155,12 @@
                         break;
                     case "musicVolume":
                         musicVol = value;
-                        setVolume(playingMusic, musicVol);
+                        playingMusic.volume = musicVol;
                         break;
                     case "audioVolume":
-                        audioVol = value;
-                        setVolume(playingAudio, audioVol);
+                        playingAudio.forEach((item) => {
+                            item.volume = value;
+                        });
                         break;
                     case "video":
                         vid.volume = value;
@@ -206,10 +199,14 @@
         connect();
     })
     setInterval(() => {
-        cws.send(JSON.stringify({action: "status", key: "connection", value: "connected"}))
+        cws.send(JSON.stringify({action: "status", key: "connection", value: "connected"}));
+        if (playingMusic != null) {
+            cws.send(JSON.stringify({action: "music", key: "progress", value: playingMusic.currentTime}));
+            cws.send(JSON.stringify({action: "music", key: "duration", value: playingMusic.duration}));
+        }
         if (vid.currentTime > 0 && !vid.paused && !vid.ended && vid.readyState > 2) {
-            cws.send(JSON.stringify({action: "video", key: "progress", value: vid.currentTime}))
-            cws.send(JSON.stringify({action: "video", key: "duration", value: vid.duration}))
+            cws.send(JSON.stringify({action: "video", key: "progress", value: vid.currentTime}));
+            cws.send(JSON.stringify({action: "video", key: "duration", value: vid.duration}));
         }
     }, 500)
 </script>
