@@ -17,14 +17,17 @@ var (
 	//go:embed control.html
 	controlHTML string
 	//go:embed overlay.html
-	overlayHTML       string
-	websocketUpgrader = websocket.Upgrader{ReadBufferSize: 1024, WriteBufferSize: 1024}
-	controlChan       chan []byte
-	statusChan        chan []byte
+	overlayHTML string
+	mediaExt    = []string{".mp4", ".mkv", ".mp3"}
+)
+
+type Server struct {
+	websocketUpgrader websocket.Upgrader
 	localIP           string
 	port              string
-	mediaExt          = []string{".mp4", ".mkv", ".mp3"}
-)
+	controlChan       chan []byte
+	statusChan        chan []byte
+}
 
 type FileListResponse struct {
 	Files []string `json:"files"`
@@ -52,20 +55,20 @@ func listDir(path string) (files []string, err error) {
 	return
 }
 
-func applyTemplate(htmlString string, w http.ResponseWriter) error {
+func (s *Server) applyTemplate(htmlString string, w http.ResponseWriter) error {
 	t := template.New("t")
 	if _, err := t.Parse(htmlString); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return fmt.Errorf("ERROR::t.Parse(rootHtml)::%v\n", err)
 	}
-	if err := t.Execute(w, Template{IP: localIP, Port: port}); err != nil {
+	if err := t.Execute(w, Template{IP: s.localIP, Port: s.port}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return fmt.Errorf("ERROR::t.Execute(w, &t)::%v\n", err)
 	}
 	return nil
 }
 
-func start() {
+func (s *Server) start() {
 	http.HandleFunc("/list", func(w http.ResponseWriter, r *http.Request) {
 		rType := r.FormValue("type")
 		music, err := listDir(fmt.Sprintf("assets/%s/", rType))
@@ -86,18 +89,18 @@ func start() {
 		http.ServeFile(w, r, fmt.Sprintf("assets/%s", r.FormValue("file")))
 	})
 	http.HandleFunc("/control", func(w http.ResponseWriter, r *http.Request) {
-		if err := applyTemplate(controlHTML, w); err != nil {
+		if err := s.applyTemplate(controlHTML, w); err != nil {
 			log.Fatalf("%v", err)
 		}
 	})
 	http.HandleFunc("/overlay", func(w http.ResponseWriter, r *http.Request) {
-		if err := applyTemplate(overlayHTML, w); err != nil {
+		if err := s.applyTemplate(overlayHTML, w); err != nil {
 			log.Fatalf("%v", err)
 		}
 	})
 	http.HandleFunc("/overlayWS", func(w http.ResponseWriter, r *http.Request) {
-		websocketUpgrader.CheckOrigin = func(r *http.Request) bool { return true }
-		conn, err := websocketUpgrader.Upgrade(w, r, nil)
+		s.websocketUpgrader.CheckOrigin = func(r *http.Request) bool { return true }
+		conn, err := s.websocketUpgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
@@ -112,18 +115,18 @@ func start() {
 				if err != nil {
 					return
 				}
-				statusChan <- msg
+				s.statusChan <- msg
 			}
 		}()
 		for {
-			if err = conn.WriteMessage(1, <-controlChan); err != nil {
+			if err = conn.WriteMessage(1, <-s.controlChan); err != nil {
 				return
 			}
 		}
 	})
 	http.HandleFunc("/controlWS", func(w http.ResponseWriter, r *http.Request) {
-		websocketUpgrader.CheckOrigin = func(r *http.Request) bool { return true }
-		conn, err := websocketUpgrader.Upgrade(w, r, nil)
+		s.websocketUpgrader.CheckOrigin = func(r *http.Request) bool { return true }
+		conn, err := s.websocketUpgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
@@ -138,40 +141,41 @@ func start() {
 				if err != nil {
 					return
 				}
-				controlChan <- msg
+				s.controlChan <- msg
 			}
 		}()
 		for {
-			if err = conn.WriteMessage(1, <-statusChan); err != nil {
+			if err = conn.WriteMessage(1, <-s.statusChan); err != nil {
 				return
 			}
 		}
 	})
-	fmt.Printf("starting server @ http://%s:%s/control http://%s:%s/overlay\n", localIP, port, localIP, port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	fmt.Printf("starting server @ http://%s:%s/control http://%s:%s/overlay\n", s.localIP, s.port, s.localIP, s.port)
+	if err := http.ListenAndServe(":"+s.port, nil); err != nil {
 		log.Printf("%v\n", err)
 	}
 }
 
-func init() {
-	localIP = func() string {
-		adders, err := net.InterfaceAddrs()
-		if err != nil {
-			return ""
-		}
-		for _, address := range adders {
-			if inet, ok := address.(*net.IPNet); ok && !inet.IP.IsLoopback() {
-				if inet.IP.To4() != nil {
-					return inet.IP.String()
+func main() {
+	s := Server{
+		websocketUpgrader: websocket.Upgrader{ReadBufferSize: 1024, WriteBufferSize: 1024},
+		localIP: func() string {
+			adders, err := net.InterfaceAddrs()
+			if err != nil {
+				return ""
+			}
+			for _, address := range adders {
+				if inet, ok := address.(*net.IPNet); ok && !inet.IP.IsLoopback() {
+					if inet.IP.To4() != nil {
+						return inet.IP.String()
+					}
 				}
 			}
-		}
-		return ""
-	}()
-}
-
-func main() {
-	port = "8605"
-	controlChan, statusChan = make(chan []byte), make(chan []byte)
-	start()
+			return ""
+		}(),
+		port:        "8605",
+		controlChan: make(chan []byte),
+		statusChan:  make(chan []byte),
+	}
+	s.start()
 }
