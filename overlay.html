@@ -46,6 +46,7 @@
     let playingMusic;
     let audioVol = 0.8;
     let audioPlaybackRate = 1.0;
+    let videoPlaybackRate = 1.0;
     let musicVol = 0.8;
     let videoVol = 0.8;
     let assetUrl = `http://${serverIP}:${port}/assets?file=`
@@ -59,6 +60,7 @@
             vidDiv.classList.remove("hide");
             vidDiv.classList.add("show");
             vid.play();
+            vid.playbackRate = videoPlaybackRate;
             vid.volume = videoVol;
         } else {
             vid.pause()
@@ -73,6 +75,7 @@
             jd = JSON.parse(msg.data);
         }
         catch (e) {
+            reportError("Error parsing json", e);
             console.log("Error parsing json:", e);
             return;
         }
@@ -143,6 +146,10 @@
                 break;
             case "volume":
                 switch (key) {
+                    case "videoPlaybackRate":
+                        videoPlaybackRate = value;
+                        vid.playbackRate = value
+                        break;
                     case "playbackRate":
                         audioPlaybackRate = value;
                         playingAudio.forEach((item) => {
@@ -167,13 +174,17 @@
                         vid.volume = value;
                         break;
                     default:
-                        console.log("you done fucked up -> processControlMessage:volume")
+                        reportError(`processControlMessage->volume:switch fell through`, key);
+                        console.log("you done fucked up -> processControlMessage:volume");
                 }
                 break;
         }
     };
     let address = `ws://${serverIP}:${port}/overlayWS`;
     let cws;
+    let reportError = (info, error) => {
+        cws.send(JSON.stringify({action: "error", key: info, value: error}));
+    };
     let connect = () => {
         console.log(`connecting to ${address}`)
         cws = new WebSocket(address);

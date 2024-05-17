@@ -4,7 +4,7 @@ if [ ! -d "build" ]; then
 fi
 pv="0.0.1"
 pn="obs-drops-overlay"
-GOARCH=amd64
+GOARCH="amd64"
 declare -a goos=("windows" "linux" "darwin")
 for i in "${goos[@]}"; do
   if [ "${i}" == "windows" ]; then

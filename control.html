@@ -61,7 +61,10 @@
         <button onclick="sendControlMessage('video', 'pr', '');">vid pause/resume</button>
         <button onclick="sendControlMessage('video', 'stop', '');">stop vid</button>
         <br>
+        <label for="videoPlaybackRate">Video Playback Rate</label><input type="range" value=1.0 step=0.1 max=2 min=0.1 id="videoPlaybackRate" onchange="let vprv = document.getElementById('videoPlaybackRate').value;setVolume(vprv, 'videoPlaybackRate');document.getElementById('videoPlaybackRateValue').innerText = vprv;"><span id="videoPlaybackRateValue">1</span><button onclick="setVolume('1', 'videoPlaybackRate');document.getElementById('videoPlaybackRate').value = 1;document.getElementById('videoPlaybackRateValue').innerText = '1'">1</button>
+        <br>
         <label for="videoVolume">Video Volume</label><input type="range" value=1.0 step=0.1 max=1 min=0 id="videoVolume" onchange="setVolume(document.getElementById('videoVolume').value, 'videoVolume')">
+        <br>
         <label for="videoProgress">videoProgress:<span id="videoProgressIntEm"></span></label><input type="range" min=0  step=0.01 max=10 id="videoProgress" onchange="sendControlMessage('video', 'seek', document.getElementById('videoProgress').value);">
         <br>
         <button onclick="stopAudio('audio')">Stop audio</button>
@@ -160,6 +163,8 @@
                     }
                     musicProgressIntEm.innerText = `${timeFix(musicProgressCurrent)}/${timeFix(musicProgressDuration)}`
                     break;
+                default:
+                    alert(`${key} -> ${value}`);
             }
         };
         let connect = () => {
