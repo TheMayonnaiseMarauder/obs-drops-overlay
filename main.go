@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"html/template"
@@ -157,6 +158,9 @@ func (s *Server) start() {
 }
 
 func main() {
+	var port string
+	flag.StringVar(&port, "port", "8605", "port to listen on")
+	flag.Parse()
 	s := Server{
 		websocketUpgrader: websocket.Upgrader{ReadBufferSize: 1024, WriteBufferSize: 1024},
 		localIP: func() string {
@@ -173,7 +177,7 @@ func main() {
 			}
 			return ""
 		}(),
-		port:        "8605",
+		port:        port,
 		controlChan: make(chan []byte),
 		statusChan:  make(chan []byte),
 	}

@@ -20,7 +20,7 @@
             border: red 1px solid;
             width: 50%;
             position: fixed;
-            overflow: auto;
+            overflow: scroll;
         }
         #setEm {
             height: 100%;
@@ -38,12 +38,25 @@
             border: red 1px solid;
             color: white;
         }
+        button:not(:active) {
+            transition: background-color 10ms step-end;
+        }
+        button:active {
+            background: red;
+        }
         #status {
             float: right;
             width: 33%;
             right: 0;
             top: 0;
             border: red solid 1px;
+        }
+        br {
+            padding-top: 5px;
+            margin: 5px;
+        }
+        .controlSubDiv {
+            border: red 1px solid;
         }
     </style>
     <title>control</title>
@@ -55,43 +68,40 @@
             <br>
             <span id="overlayStatus"></span>
         </div>
-        <label for="vid">videoFile/Url:</label>
-        <input value="" type="text" id="vid">
-        <button onclick="sendVideo(document.getElementById('vid').value)">send vid</button>
-        <button onclick="sendControlMessage('video', 'pr', '');">vid pause/resume</button>
-        <button onclick="sendControlMessage('video', 'stop', '');">stop vid</button>
-        <br>
-        <label for="videoPlaybackRate">Video Playback Rate</label><input type="range" value=1.0 step=0.1 max=2 min=0.1 id="videoPlaybackRate" onchange="let vprv = document.getElementById('videoPlaybackRate').value;setVolume(vprv, 'videoPlaybackRate');document.getElementById('videoPlaybackRateValue').innerText = vprv;"><span id="videoPlaybackRateValue">1</span><button onclick="setVolume('1', 'videoPlaybackRate');document.getElementById('videoPlaybackRate').value = 1;document.getElementById('videoPlaybackRateValue').innerText = '1'">1</button>
-        <br>
-        <label for="videoVolume">Video Volume</label><input type="range" value=1.0 step=0.1 max=1 min=0 id="videoVolume" onchange="setVolume(document.getElementById('videoVolume').value, 'videoVolume')">
-        <br>
-        <label for="videoProgress">videoProgress:<span id="videoProgressIntEm"></span></label><input type="range" min=0  step=0.01 max=10 id="videoProgress" onchange="sendControlMessage('video', 'seek', document.getElementById('videoProgress').value);">
-        <br>
-        <button onclick="stopAudio('audio')">Stop audio</button>
-        <br>
-        <label for="playbackRate">playbackRate</label><input type="range" value=1.0 step=0.1 max=1.0 min=0.4 id="playbackRate" onchange="setVolume(document.getElementById('playbackRate').value, 'playbackRate')">
-        <br>
-        <label for="audioVolume">Audio Volume</label><input type="range" value=1.0 step=0.01 max=1 min=0 id="audioVolume" onchange="setVolume(document.getElementById('audioVolume').value, 'audioVolume')">
-        <br>
-        <button onclick="sendControlMessage('music', 'stop', '')">Stop Music</button>
-        <br>
-        <label for="musicVolume">Music Volume</label><input type="range" value=0.6 step=0.01 max=1 min=0 id="musicVolume" onchange="setVolume(document.getElementById('musicVolume').value, 'musicVolume')">
-        <br>
-        <label for="musicProgress">musicProgress:<span id="musicProgressIntEm"></span></label><input type="range" min=0  step=0.01 max=10 id="musicProgress" onchange="sendControlMessage('music', 'seek', document.getElementById('musicProgress').value);">
+        <div id="videoControl" class="controlSubDiv">
+            <label for="vid">videoFile/Url:</label>
+            <input value="" type="text" id="vid">
+            <br>
+            <button onclick="sendControlMessage('video', 'stop', '');">stop vid</button>
+            <button onclick="sendVideo(document.getElementById('vid').value)">send vid</button>
+            <button onclick="sendControlMessage('video', 'pr', '');">vid pause/resume</button>
+            <br>
+            <label for="videoPlaybackRate">Video Playback Rate</label><input type="range" value=1.0 step=0.1 max=2 min=0.1 id="videoPlaybackRate" onchange="let vprv = document.getElementById('videoPlaybackRate').value;setVolume(vprv, 'videoPlaybackRate');document.getElementById('videoPlaybackRateValue').innerText = vprv;"><span id="videoPlaybackRateValue">1</span><button onclick="setVolume('1', 'videoPlaybackRate');document.getElementById('videoPlaybackRate').value = 1;document.getElementById('videoPlaybackRateValue').innerText = '1'">1</button>
+            <br>
+            <label for="videoVolume">Video Volume</label><input type="range" value=1.0 step=0.1 max=1 min=0 id="videoVolume" onchange="setVolume(document.getElementById('videoVolume').value, 'videoVolume')">
+            <br>
+            <label for="videoProgress">videoProgress:<span id="videoProgressIntEm"></span></label><input type="range" min=0  step=0.01 max=10 id="videoProgress" onchange="sendControlMessage('video', 'seek', document.getElementById('videoProgress').value);">
+        </div>
+        <div id="audioControl" class="controlSubDiv">
+            <button onclick="stopAudio('audio')">Stop audio</button>
+            <label for="audioVolume">Audio Volume</label><input type="range" value=1.0 step=0.01 max=1 min=0 id="audioVolume" onchange="setVolume(document.getElementById('audioVolume').value, 'audioVolume')">
+            <br>
+            <label for="playbackRate">playbackRate</label><input type="range" value=1.0 step=0.1 max=1.0 min=0.4 id="playbackRate" onchange="setVolume(document.getElementById('playbackRate').value, 'playbackRate')">
+        </div>
+        <div id="musicControl" class="controlSubDiv">
+            <button onclick="sendControlMessage('music', 'stop', '')">Stop Music</button>
+            <label for="musicVolume">Music Volume</label><input type="range" value=0.6 step=0.01 max=1 min=0 id="musicVolume" onchange="setVolume(document.getElementById('musicVolume').value, 'musicVolume')">
+            <br>
+            <label for="musicProgress">musicProgress:<span id="musicProgressIntEm"></span></label><input type="range" min=0  step=0.01 max=10 id="musicProgress" onchange="sendControlMessage('music', 'seek', document.getElementById('musicProgress').value);">
+        </div>
     </div>
     <div id="contentEm">
-        <div id="dropsAudio">
-            <p>Audio</p>
-        </div>
-        <div id="dropsVideo">
-            <p>Video</p>
-        </div>
-        <div id="music">
-            <p>Music</p>
-        </div>
+        <button onclick="reload();">Reload</button>
+        <div id="dropsAudio"></div>
+        <div id="dropsVideo"></div>
+        <div id="music"></div>
     </div>
     <script>
-        // TODO : reload content button
         let serverIP = "{{ .IP }}";
         let port = "{{ .Port }}";
         let listUrl = `http://${serverIP}:${port}/list?type=`;
@@ -163,8 +173,8 @@
                     }
                     musicProgressIntEm.innerText = `${timeFix(musicProgressCurrent)}/${timeFix(musicProgressDuration)}`
                     break;
-                default:
-                    alert(`${key} -> ${value}`);
+                case "error":
+                    console.log(`ERROR:: action = ${action} : key = ${key} : value = : ${value}`);
             }
         };
         let connect = () => {
@@ -277,11 +287,20 @@
                 setStatus();
             }
         };
+        let load = () => {
+            musicEm.innerHTML = "";
+            musicEm.insertAdjacentHTML("beforeend", "<p>Music</p>");
+            audioDropEm.innerHTML = "";
+            audioDropEm.insertAdjacentHTML("beforeend", "<p>Audio</p>");
+            videoDropEm.innerHTML = "";
+            videoDropEm.insertAdjacentHTML("beforeend", "<p>Video</p>");
+            loadDrops();
+            loadMusic();
+        };
         window.addEventListener('load', function() {
             console.log('All assets are loaded')
             connect();
-            loadDrops();
-            loadMusic();
+            load()
             setInterval(() => {
                 checkConnectionStatus();
             }, 3000);
