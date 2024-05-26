@@ -2,7 +2,7 @@
 if [ ! -d "build" ]; then
   mkdir build
 fi
-pv="0.0.2"
+pv="0.0.3"
 pn="obs-drops-overlay"
 GOARCH="amd64"
 declare -a goos=("windows" "linux" "darwin")
